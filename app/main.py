@@ -6,17 +6,17 @@ def main():
     sys.stdout.write("$ ")
 
     # Wait for user input
-    user_input = input()
-    user_input_parts = user_input.split()
+    command = input()
+    argv = command.split()
 
-    if user_input == 'exit 0':
+    if command == 'exit 0':
         exit(0)
-        
-    elif user_input.startswith('echo'):
-        print(f"{user_input_parts[1:]}")
+
+    elif command.startswith('echo'):
+        print(" ".join(argv[1:]))
 
     else:
-        print(f"{user_input}: command not found")
+        print(f"{command}: command not found")
     main()
 
 if __name__ == "__main__":
