@@ -19,9 +19,9 @@ def main():
 
     elif command.startswith('type'):
         if argv[0] in builtin_commands:
-            print(f"{argv[0]} is a shell builtin")
+            print(f"{argv[1]} is a shell builtin")
         else:
-            print(f"{argv[0]} not found")
+            print(f"{argv[1]} not found")
 
     else:
         print(f"{command}: command not found")
