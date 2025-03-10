@@ -1,8 +1,8 @@
 import sys
-
+import shutil
 
 def main():
-    builtin_commands = ["echo", "exit", "type"]
+    BUILTIN_COMMANDS = ["echo", "exit", "type"]
 
     # Uncomment this block to pass the first stage
     sys.stdout.write("$ ")
@@ -18,8 +18,10 @@ def main():
         print(" ".join(argv[1:]))
 
     elif command.startswith('type'):
-        if argv[1] in builtin_commands:
+        if argv[1] in BUILTIN_COMMANDS:
             print(f"{argv[1]} is a shell builtin")
+        elif path := shutil.which(argv[1]):
+            print(f"{argv[1]} is {path}")
         else:
             print(f"{argv[1]} not found")
 
