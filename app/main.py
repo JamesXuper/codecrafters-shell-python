@@ -2,6 +2,8 @@ import sys
 
 
 def main():
+    builtin_commands = ["echo", "exit", "type"]
+
     # Uncomment this block to pass the first stage
     sys.stdout.write("$ ")
 
@@ -14,6 +16,12 @@ def main():
 
     elif command.startswith('echo'):
         print(" ".join(argv[1:]))
+
+    elif command.startswith('type'):
+        if argv[0] in builtin_commands:
+            print(f"{argv[0]} is a shell builtin")
+        else:
+            print(f"{argv[0]} not found")
 
     else:
         print(f"{command}: command not found")
