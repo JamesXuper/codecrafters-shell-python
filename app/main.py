@@ -7,7 +7,11 @@ def main():
 
     # Wait for user input
     user_input = input()
-    print(f"{user_input}: command not found")
+
+    if user_input == 'exit 0':
+        exit(0)
+    else:
+        print(f"{user_input}: command not found")
     main()
 
 if __name__ == "__main__":
