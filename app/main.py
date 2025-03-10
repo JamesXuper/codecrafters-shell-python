@@ -7,9 +7,14 @@ def main():
 
     # Wait for user input
     user_input = input()
+    user_input_parts = user_input.split()
 
     if user_input == 'exit 0':
         exit(0)
+        
+    elif user_input.startswith('echo'):
+        print(f"{user_input_parts[1:]}")
+
     else:
         print(f"{user_input}: command not found")
     main()
