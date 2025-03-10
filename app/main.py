@@ -18,7 +18,7 @@ def main():
         print(" ".join(argv[1:]))
 
     elif command.startswith('type'):
-        if argv[0] in builtin_commands:
+        if argv[1] in builtin_commands:
             print(f"{argv[1]} is a shell builtin")
         else:
             print(f"{argv[1]} not found")
