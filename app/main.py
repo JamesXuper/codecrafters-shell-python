@@ -34,19 +34,18 @@ def main():
         elif cmd == "type": #checking whether we know the 'type' of the builtin function
             input_type(cmd, argv)
         else:
-            print(argv)
-            # # Check if the command exists in PATH
-            # executable_path = shutil.which(cmd)
-            # if executable_path:
-            #     # Execute the command with its arguments
-            #     try:
-            #         process = subprocess.run([executable_path] + argv)
-            #         # No need to print the output as subprocess.run will print 
-            #         # stdout and stderr by default
-            #     except Exception as e:
-            #         print(f"Error executing {cmd}: {e}")
-            # else:
-            #     print(f"{cmd}: command not found")
+            # Check if the command exists in PATH
+            executable_path = shutil.which(cmd)
+            if executable_path:
+                # Execute the command with its arguments
+                try:
+                    process = subprocess.run(cmd + argv)
+                    # No need to print the output as subprocess.run will print 
+                    # stdout and stderr by default
+                except Exception as e:
+                    print(f"Error executing {cmd}: {e}")
+            else:
+                print(f"{cmd}: command not found")
 
 if __name__ == "__main__":
     main()
