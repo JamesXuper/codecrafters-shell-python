@@ -35,11 +35,10 @@ def main():
             input_type(cmd, argv)
         else:
             # Check if the command exists in PATH
-            executable_path = shutil.which(cmd)
-            if executable_path:
+            if shutil.which(cmd):
                 # Execute the command with its arguments
                 try:
-                    process = subprocess.run(executable_path)
+                    process = subprocess.run([cmd] + argv)
                     # No need to print the output as subprocess.run will print 
                     # stdout and stderr by default
                 except Exception as e:
