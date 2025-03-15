@@ -11,7 +11,7 @@ def input_exit(argv):
 def input_echo(argv):
     sys.stdout.write(" ".join(argv) + "\n")
 
-def input_type(cmd, argv):
+def input_type(argv):
     if argv[0] in BUILTIN_COMMANDS:
         print(f"{argv[0]} is a shell builtin")
     elif path := shutil.which(argv[0]):
@@ -42,7 +42,7 @@ def main():
         elif cmd == "echo":
             input_echo(argv)
         elif cmd == "type": #checking whether we know the 'type' of the builtin function
-            input_type(cmd, argv)
+            input_type(argv)
         elif cmd == "pwd":
             input_pwd()
         elif cmd == "cd":
