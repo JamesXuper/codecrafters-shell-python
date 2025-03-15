@@ -19,11 +19,10 @@ def input_type(cmd, argv):
         print(f"{argv[0]} not found")
 
 def main():
-    #prints the $ once after command begins
-    sys.stdout.write("$ ")
 
     #REPL set up
     while True:
+        sys.stdout.write("$ ")
         user_input = input()
         cmd, *argv = user_input.split() #splits the input string into an array separated by white space
 
