@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 
-BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd"]
+BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd", "cd"]
 
 def input_exit(argv):
     exit(int(argv[0]))
@@ -23,6 +23,12 @@ def input_pwd():
     cwd = os.getcwd()
     print(cwd)
 
+def input_cd(argv):
+    if os.path.exists(argv[0]):
+        os.chdir(argv[0])
+    else:
+        print(f"cd: {argv[0]}: No such file or directory")
+
 def main():
 
     #REPL set up
@@ -39,6 +45,8 @@ def main():
             input_type(cmd, argv)
         elif cmd == "pwd":
             input_pwd()
+        elif cmd == "cd":
+            input_cd(argv)
         else:
             if shutil.which(cmd):               #Check if the command exists in PATH
                 try:
