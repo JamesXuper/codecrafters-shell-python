@@ -1,4 +1,5 @@
 import sys
+import os
 import shutil
 import subprocess
 
@@ -18,6 +19,10 @@ def input_type(cmd, argv):
     else:
         print(f"{argv[0]} not found")
 
+def input_pwd():
+    cwd = os.getcwd()
+    print(cwd)
+
 def main():
 
     #REPL set up
@@ -32,10 +37,10 @@ def main():
             input_echo(argv)
         elif cmd == "type": #checking whether we know the 'type' of the builtin function
             input_type(cmd, argv)
+        elif cmd == "pwd":
+            input_pwd()
         else:
-            # Check if the command exists in PATH
-            if shutil.which(cmd):
-                # Execute the command with its arguments
+            if shutil.which(cmd):               #Check if the command exists in PATH
                 try:
                     process = subprocess.run([cmd] + argv)
                     # No need to print the output as subprocess.run will print 
