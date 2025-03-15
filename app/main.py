@@ -26,8 +26,6 @@ def input_pwd():
 def input_cd(argv):
     if os.path.exists(argv[0]):
         os.chdir(argv[0])
-    elif argv[0] == '~':
-        os.chdir(home)
     else:
         print(f"cd: {argv[0]}: No such file or directory")
 
