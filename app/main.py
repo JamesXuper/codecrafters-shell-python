@@ -11,7 +11,7 @@ def input_echo(argv):
     sys.stdout.write(" ".join(argv) + "\n")
 
 def input_type(cmd, argv):
-    if cmd in BUILTIN_COMMANDS:
+    if argv[0] in BUILTIN_COMMANDS:
         print(f"{argv[0]} is a shell builtin")
     elif path := shutil.which(argv[0]):
         print(f"{argv[0]} is {path}")
