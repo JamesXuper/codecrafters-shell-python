@@ -1,61 +1,51 @@
 import sys
 import shutil
+import subprocess
 
-# def main():
+BUILTIN_COMMANDS = ["echo", "exit", "type"]
 
-#     BUILTIN_COMMANDS = ["echo", "exit", "type"]
+def input_exit(argv):
+    exit(int(argv[0]))
 
-#     # Uncomment this block to pass the first stage
-#     sys.stdout.write("$ ")
+def input_echo(argv):
+    sys.stdout.write(" ".join(argv) + "\n")
 
-#     # Wait for user input
-#     command = input()
-#     argv = command.split()
-
-#     if command == "exit 0":
-#         exit(0)
-#     elif command.startswith("echo"):
-#         print(" ".join(argv[1:]))
-#     elif command.startswith("type"):
-#         if argv[1] in BUILTIN_COMMANDS:
-#             print(f"{argv[1]} is a shell builtin")
-#         elif path := shutil.which(argv[1]):
-#             print(f"{argv[1]} is {path}")
-#         else:
-#             print(f"{argv[1]} not found")
-#     else:
-#         print(f"{command}: command not found")
-    
-#     main()
+def input_type(cmd, argv):
+    if cmd in BUILTIN_COMMANDS:
+        print(f"{argv[0]} is a shell builtin")
+    elif path := shutil.which(argv[0]):
+        print(f"{argv[0]} is {path}")
+    else:
+        print(f"{argv[0]} not found")
 
 def main():
-    BUILTIN_COMMANDS = ["echo", "exit", "type"]
-
-    
     #prints the $ once after command begins
     sys.stdout.write("$ ")
 
     #REPL set up
     while True:
         user_input = input()
-        argv = user_input.split() #splits the input string into an array separated by white space
+        cmd, *argv = user_input.split() #splits the input string into an array separated by white space
 
-        if argv[0] == "exit 0":
-            exit(0)
-
-        elif argv[0] == "echo":
-            print(" ".join(argv[1:]))
-
-        elif argv[0] == "type": #checking whether we know the 'type' of the builtin function
-            if argv[1] in BUILTIN_COMMANDS:
-                print(f"{argv[1]} is a shell builtin")
-            elif path := shutil.which(argv[1]):
-                print(f"{argv[1]} is {path}")
-            else:
-                print(f"{argv[1]} not found")
-
+        if cmd == "exit":
+            input_exit(argv)
+        elif cmd == "echo":
+            input_echo(argv)
+        elif cmd == "type": #checking whether we know the 'type' of the builtin function
+            input_type(cmd, argv)
         else:
-            print(f"{argv[0]}: command not found")
+            # Check if the command exists in PATH
+            executable_path = shutil.which(cmd)
+            if executable_path:
+                # Execute the command with its arguments
+                try:
+                    process = subprocess.run([executable_path] + argv)
+                    # No need to print the output as subprocess.run will print 
+                    # stdout and stderr by default
+                except Exception as e:
+                    print(f"Error executing {cmd}: {e}")
+            else:
+                print(f"{cmd}: command not found")
 
 if __name__ == "__main__":
     main()
