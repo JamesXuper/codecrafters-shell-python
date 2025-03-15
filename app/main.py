@@ -8,8 +8,16 @@ BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd", "cd"]
 def input_exit(argv):
     exit(int(argv[0]))
 
-def input_echo(argv):
-    sys.stdout.write(" ".join(argv) + "\n")
+def input_echo(user_input, argv):
+    result = []
+    i = 0
+
+    if user_input[5:].startswith("'"):
+        print('single quotes detected')
+        # while i < len(argv):
+        #     arg = argv[i]
+    else:
+        sys.stdout.write(" ".join(argv) + "\n")     
 
 def input_type(argv):
     if argv[0] in BUILTIN_COMMANDS:
@@ -42,7 +50,7 @@ def main():
         if cmd == "exit":
             input_exit(argv)
         elif cmd == "echo":
-            input_echo(argv)
+            input_echo(user_input, argv)
         elif cmd == "type": #checking whether we know the 'type' of the builtin function
             input_type(argv)
         elif cmd == "pwd":
