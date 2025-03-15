@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 
-BUILTIN_COMMANDS = ["echo", "exit", "type"]
+BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd"]
 
 def input_exit(argv):
     exit(int(argv[0]))
