@@ -39,7 +39,7 @@ def main():
             if executable_path:
                 # Execute the command with its arguments
                 try:
-                    process = subprocess.run(user_input)
+                    process = subprocess.run(executable_path)
                     # No need to print the output as subprocess.run will print 
                     # stdout and stderr by default
                 except Exception as e:
