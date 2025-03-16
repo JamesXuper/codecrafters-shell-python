@@ -4,9 +4,14 @@ import shutil
 import subprocess
 import shlex
 import readline
-import glob
+import time
 
 BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd", "cd"]
+
+# Track the last tab completion time to detect double-tabs
+last_tab_time = 0
+last_tab_text = None
+last_tab_matches = []
 
 def input_exit(argv):
     exit(int(argv[0]) if argv else 0)
@@ -154,26 +159,86 @@ def get_executables_in_path():
     
     return executables
 
+def get_matches(text):
+    """Get all commands (builtins and executables) that match the given prefix"""
+    matches = []
+    
+    # Add matching builtin commands
+    matches.extend([cmd for cmd in BUILTIN_COMMANDS if cmd.startswith(text)])
+    
+    # Add matching executables in PATH
+    executables = get_executables_in_path()
+    matches.extend([cmd for cmd in executables if cmd.startswith(text)])
+    
+    return sorted(matches)
+
 def complete(text, state):
     """Tab completion function for readline."""
-    if state == 0:
-        # First time called, build the matches list
-        # Start with builtin commands
-        matches = [cmd + ' ' for cmd in BUILTIN_COMMANDS if cmd.startswith(text)]
-        
-        # Add executables in PATH
-        executables = get_executables_in_path()
-        matches.extend([cmd + ' ' for cmd in executables if cmd.startswith(text)])
-        
-        # Save to the global variable to use across calls
-        complete.matches = matches
+    global last_tab_time, last_tab_text, last_tab_matches
     
-    try:
-        return complete.matches[state]
-    except (IndexError, AttributeError):
-        return None
+    # Check if this is a second tab press for the same text within a short time window
+    current_time = time.time()
+    double_tab = (text == last_tab_text and 
+                   current_time - last_tab_time < 0.5 and 
+                   last_tab_matches)
+    
+    if state == 0:
+        # First state call: get all matches
+        matches = get_matches(text)
+        
+        # Store for potential double-tab
+        last_tab_text = text
+        last_tab_time = current_time
+        last_tab_matches = matches
+        
+        if len(matches) == 1:
+            # Single match: return the match with a space
+            return matches[0] + " "
+        elif len(matches) > 1:
+            # Multiple matches
+            if double_tab:
+                # Second tab press: print all matches
+                print()
+                print("  ".join(matches))
+                print(f"$ {text}", end="")
+                # Return none so readline doesn't modify the line
+                return None
+            else:
+                # First tab press: ring the bell
+                sys.stdout.write("\a")
+                sys.stdout.flush()
+                # Find common prefix if any
+                if matches:
+                    common_prefix = matches[0]
+                    for match in matches[1:]:
+                        i = 0
+                        while i < len(common_prefix) and i < len(match) and common_prefix[i] == match[i]:
+                            i += 1
+                        common_prefix = common_prefix[:i]
+                    
+                    if common_prefix and len(common_prefix) > len(text):
+                        return common_prefix
+            
+            # No completion yet, but store the matches for potential double-tab
+            complete.matches = []
+            return None
+        else:
+            # No matches
+            complete.matches = []
+            return None
+    else:
+        # Subsequent state calls after multiple matches on second tab
+        if double_tab:
+            # Already printed the list, don't complete anything
+            return None
+        
+        # Return the matches in order by state
+        try:
+            return complete.matches[state] + " "
+        except (IndexError, AttributeError):
+            return None
 
-# Initialize the matches attribute
+# Initialize the attribute
 complete.matches = []
 
 def main():
