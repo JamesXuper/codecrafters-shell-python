@@ -9,13 +9,14 @@ BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd", "cd"]
 def input_exit(argv):
     exit(int(argv[0]))
 
-def input_echo(user_input, argv):
-    if user_input.startswith("'") and user_input.endswith("'"):
-        message = user_input[6:-1]
-        print(message)
-    else:
-        parts = shlex.split(user_input[5:])
-        print(" ".join(parts))
+def input_echo(user_input):
+    args = shlex.split(user_input)
+
+    for i in range(len(args)):
+        if (args[i].startswith("'") and args[i].endswith("'")) or (args[i].startswith('"') and args[i].endswith('"')):
+            args[i] = args[i][1:-1]  # Odstraníme obalující uvozovky
+
+    print(" ".join(args))
 
 def input_type(argv):
     if argv[0] in BUILTIN_COMMANDS:
@@ -48,7 +49,7 @@ def main():
         if cmd == "exit":
             input_exit(argv)
         elif cmd == "echo":
-            input_echo(user_input, argv)
+            input_echo(user_input[6:])
         elif cmd == "type": #checking whether we know the 'type' of the builtin function
             input_type(argv)
         elif cmd == "pwd":
