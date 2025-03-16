@@ -14,6 +14,10 @@ def input_echo(user_input, stdout_file=None, stderr_file=None):
     parts = shlex.split(user_input[5:])  # Remove "echo " prefix
     output = " ".join(parts)
     
+    # Always create the stderr file if specified, even if empty
+    if stderr_file:
+        open(stderr_file, 'w').close()
+    
     if stdout_file:
         with open(stdout_file, 'w') as f:
             f.write(output + "\n")
@@ -21,6 +25,10 @@ def input_echo(user_input, stdout_file=None, stderr_file=None):
         print(output)
 
 def input_type(argv, stdout_file=None, stderr_file=None):
+    # Always create the stderr file if specified, even if empty
+    if stderr_file:
+        open(stderr_file, 'w').close()
+        
     if argv[0] in BUILTIN_COMMANDS:
         result = f"{argv[0]} is a shell builtin"
     elif path := shutil.which(argv[0]):
@@ -41,6 +49,10 @@ def input_type(argv, stdout_file=None, stderr_file=None):
         print(result)
 
 def input_pwd(stdout_file=None, stderr_file=None):
+    # Always create the stderr file if specified, even if empty
+    if stderr_file:
+        open(stderr_file, 'w').close()
+        
     cwd = os.getcwd()
     
     if stdout_file:
@@ -50,6 +62,10 @@ def input_pwd(stdout_file=None, stderr_file=None):
         print(cwd)
 
 def input_cd(argv, stderr_file=None):
+    # Always create the stderr file if specified, even if empty
+    if stderr_file:
+        open(stderr_file, 'w').close()
+        
     if os.path.exists(argv[0]):
         os.chdir(argv[0])
     elif argv[0] == "~":
@@ -89,6 +105,12 @@ def parse_redirection(command_parts):
     
     return cmd_parts, stdout_file, stderr_file
 
+def ensure_directory_exists(filepath):
+    """Ensure the directory for a file exists"""
+    directory = os.path.dirname(filepath)
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)
+
 def main():
     #REPL set up
     while True:
@@ -112,6 +134,14 @@ def main():
         # Parse for redirection
         cmd_parts, stdout_file, stderr_file = parse_redirection(parts)
         
+        # Make sure parent directories exist
+        if stdout_file:
+            ensure_directory_exists(stdout_file)
+        if stderr_file:
+            ensure_directory_exists(stderr_file)
+            # Always create the stderr file, even if empty
+            open(stderr_file, 'w').close()
+        
         if not cmd_parts:
             continue
         
@@ -123,12 +153,10 @@ def main():
         if stdout_file or stderr_file:
             # This is a simple way to strip the redirection part from the input
             # It's not perfect but works for basic cases
-            if ">" in user_input:
-                modified_input = user_input.split(" >")[0]
-            if "1>" in user_input:
-                modified_input = user_input.split(" 1>")[0]
-            if "2>" in user_input:
-                modified_input = user_input.split(" 2>")[0]
+            modified_input = user_input
+            for op in [" >", " 1>", " 2>"]:
+                if op in modified_input:
+                    modified_input = modified_input.split(op)[0]
         
         if cmd == "exit":
             input_exit(argv)
@@ -144,11 +172,11 @@ def main():
             if shutil.which(cmd):  # Check if the command exists in PATH
                 try:
                     # Configure stdout and stderr redirection
-                    stdout = subprocess.PIPE if stdout_file else None
-                    stderr = subprocess.PIPE if stderr_file else None
+                    stdout_dest = subprocess.PIPE if stdout_file else None
+                    stderr_dest = subprocess.PIPE if stderr_file else None
                     
                     # Run the command with appropriate redirection
-                    process = subprocess.run(cmd_parts, stdout=stdout, stderr=stderr, text=True)
+                    process = subprocess.run(cmd_parts, stdout=stdout_dest, stderr=stderr_dest, text=True)
                     
                     # Handle stdout redirection
                     if stdout_file and process.stdout is not None:
