@@ -4,6 +4,7 @@ import shutil
 import subprocess
 import shlex
 import readline
+import glob
 
 BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd", "cd"]
 
@@ -139,14 +140,41 @@ def ensure_directory_exists(filepath):
     if directory and not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
 
+def get_executables_in_path():
+    """Get all executable files in the PATH"""
+    executables = set()
+    path_dirs = os.environ.get('PATH', '').split(os.pathsep)
+    
+    for path_dir in path_dirs:
+        if os.path.isdir(path_dir):
+            for item in os.listdir(path_dir):
+                full_path = os.path.join(path_dir, item)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    executables.add(item)
+    
+    return executables
+
 def complete(text, state):
     """Tab completion function for readline."""
-    # Get matches for builtins starting with the text
-    matches = [cmd + ' ' for cmd in BUILTIN_COMMANDS if cmd.startswith(text)]
+    if state == 0:
+        # First time called, build the matches list
+        # Start with builtin commands
+        matches = [cmd + ' ' for cmd in BUILTIN_COMMANDS if cmd.startswith(text)]
+        
+        # Add executables in PATH
+        executables = get_executables_in_path()
+        matches.extend([cmd + ' ' for cmd in executables if cmd.startswith(text)])
+        
+        # Save to the global variable to use across calls
+        complete.matches = matches
+    
     try:
-        return matches[state]
-    except IndexError:
+        return complete.matches[state]
+    except (IndexError, AttributeError):
         return None
+
+# Initialize the matches attribute
+complete.matches = []
 
 def main():
     # Set up readline for autocomplete
