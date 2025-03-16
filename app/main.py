@@ -3,11 +3,12 @@ import os
 import shutil
 import subprocess
 import shlex
+import readline
 
 BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd", "cd"]
 
 def input_exit(argv):
-    exit(int(argv[0]))
+    exit(int(argv[0]) if argv else 0)
 
 def input_echo(user_input, stdout_file=None, stderr_file=None, append_stdout=False, append_stderr=False):
     # Use shlex.split to properly handle quoted arguments
@@ -74,7 +75,9 @@ def input_cd(argv, stderr_file=None, append_stderr=False):
         mode = 'a' if append_stderr else 'w'
         open(stderr_file, mode).close()
         
-    if os.path.exists(argv[0]):
+    if not argv:
+        os.chdir(os.path.expanduser("~"))
+    elif os.path.exists(argv[0]):
         os.chdir(argv[0])
     elif argv[0] == "~":
         os.chdir(os.path.expanduser("~"))
@@ -136,11 +139,30 @@ def ensure_directory_exists(filepath):
     if directory and not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
 
+def complete(text, state):
+    """Tab completion function for readline."""
+    # Get matches for builtins starting with the text
+    matches = [cmd + ' ' for cmd in BUILTIN_COMMANDS if cmd.startswith(text)]
+    try:
+        return matches[state]
+    except IndexError:
+        return None
+
 def main():
-    #REPL set up
+    # Set up readline for autocomplete
+    readline.parse_and_bind("tab: complete")
+    readline.set_completer(complete)
+    
+    # REPL set up
     while True:
         sys.stdout.write("$ ")
-        user_input = input()
+        sys.stdout.flush()  # Make sure the prompt is displayed
+        
+        try:
+            user_input = input()
+        except EOFError:
+            print()  # Add a newline
+            break
         
         # Handle empty input
         if not user_input.strip():
