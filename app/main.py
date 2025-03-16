@@ -246,11 +246,6 @@ def main():
     readline.parse_and_bind("tab: complete")
     readline.set_completer(complete)
     
-    # Set readline's completion append character to an empty string
-    # This prevents readline from adding a space automatically
-    # We'll add spaces ourselves in the completer
-    readline.set_completion_append_character('')
-    
     # REPL set up
     while True:
         sys.stdout.write("$ ")
