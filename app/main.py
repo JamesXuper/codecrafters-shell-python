@@ -192,8 +192,21 @@ def complete(text, state):
         last_tab_matches = matches
         
         if len(matches) == 1:
-            # Single match: return the match with a space
-            return matches[0] + " "
+            # Single match
+            completion = matches[0]
+            
+            # Directly manipulate the line buffer for single matches to ensure space
+            line_buffer = readline.get_line_buffer()
+            cursor_pos = readline.get_endidx()
+            
+            # Replace the text with the completed command
+            new_buffer = line_buffer[:cursor_pos - len(text)] + completion + " " + line_buffer[cursor_pos:]
+            
+            # Set the new line buffer
+            readline.insert_text('')  # Clear first
+            readline.insert_text(new_buffer[len(readline.get_line_buffer()):])
+            
+            return None  # Return None to indicate we've handled it
         elif len(matches) > 1:
             # Multiple matches
             if double_tab:
@@ -234,12 +247,35 @@ def complete(text, state):
         
         # Return the matches in order by state
         try:
-            return complete.matches[state] + " "
+            if state < len(complete.matches):
+                return complete.matches[state]
+            return None
         except (IndexError, AttributeError):
             return None
 
 # Initialize the attributes
 complete.matches = []
+
+def setup_custom_completer():
+    """Set up a custom readline completer function that wraps our completer
+    to ensure spaces are added correctly to tab completions."""
+    
+    old_completer = readline.get_completer()
+    
+    def custom_complete_wrapper(text, state):
+        result = old_completer(text, state)
+        if result is not None and state == 0 and len(get_matches(text)) == 1:
+            # For a single match, make sure a space is appended
+            # This may never be reached due to our direct buffer manipulation,
+            # but is here as a fallback
+            line_buffer = readline.get_line_buffer()
+            cursor_pos = readline.get_endidx()
+            if cursor_pos == len(line_buffer):  # If cursor at end
+                if not result.endswith(" "):
+                    result += " "
+        return result
+    
+    return custom_complete_wrapper
 
 def main():
     # Set up readline for autocomplete
