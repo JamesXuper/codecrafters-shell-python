@@ -10,12 +10,9 @@ def input_exit(argv):
     exit(int(argv[0]))
 
 def input_echo(user_input):
-    if user_input.startswith("'") and user_input.endswith("'"):
-        message = user_input[6:-1]
-        print(message)
-    else:
-        parts = shlex.split(user_input[5:]) #split based on quotes
-        print(" ".join(parts))
+    # Use shlex.split to properly handle quoted arguments
+    parts = shlex.split(user_input[5:])  # Remove "echo " prefix
+    print(" ".join(parts))
 
 def input_type(argv):
     if argv[0] in BUILTIN_COMMANDS:
@@ -38,29 +35,42 @@ def input_cd(argv):
         print(f"cd: {argv[0]}: No such file or directory")
 
 def main():
-
     #REPL set up
     while True:
         sys.stdout.write("$ ")
         user_input = input()
-        cmd, *argv = user_input.split() #splits the input string into an array separated by white space
+        
+        # Handle empty input
+        if not user_input.strip():
+            continue
+            
+        # Use shlex.split for command parsing to properly handle quotes
+        try:
+            parts = shlex.split(user_input)
+            cmd = parts[0]
+            argv = parts[1:]
+        except IndexError:
+            # Handle empty input that might pass the strip check
+            continue
+        except ValueError as e:
+            print(f"Syntax error: {e}")
+            continue
 
         if cmd == "exit":
             input_exit(argv)
         elif cmd == "echo":
-            input_echo(user_input)
-        elif cmd == "type": #checking whether we know the 'type' of the builtin function
+            input_echo(user_input)  # Pass the full input for echo
+        elif cmd == "type":
             input_type(argv)
         elif cmd == "pwd":
             input_pwd()
         elif cmd == "cd":
             input_cd(argv)
         else:
-            if shutil.which(cmd):               #Check if the command exists in PATH
+            if shutil.which(cmd):  # Check if the command exists in PATH
                 try:
-                    process = subprocess.run([cmd] + argv)
-                    # No need to print the output as subprocess.run will print 
-                    # stdout and stderr by default
+                    # Use the parts already split by shlex for subprocess
+                    process = subprocess.run(parts)
                 except Exception as e:
                     print(f"Error executing {cmd}: {e}")
             else:
