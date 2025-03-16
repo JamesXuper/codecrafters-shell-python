@@ -8,11 +8,6 @@ import time
 
 BUILTIN_COMMANDS = ["echo", "exit", "type", "pwd", "cd"]
 
-# Track the last tab completion time to detect double-tabs
-last_tab_time = 0
-last_tab_text = None
-last_tab_matches = []
-
 def input_exit(argv):
     exit(int(argv[0]) if argv else 0)
 
@@ -159,234 +154,169 @@ def get_executables_in_path():
     
     return executables
 
-def get_matches(text):
-    """Get all commands (builtins and executables) that match the given prefix"""
+def my_completer(text, state):
+    """Simple completer function that always adds a space after a match"""
     matches = []
     
     # Add matching builtin commands
-    matches.extend([cmd for cmd in BUILTIN_COMMANDS if cmd.startswith(text)])
+    for cmd in BUILTIN_COMMANDS:
+        if cmd.startswith(text):
+            matches.append(cmd)
     
     # Add matching executables in PATH
-    executables = get_executables_in_path()
-    matches.extend([cmd for cmd in executables if cmd.startswith(text)])
+    for cmd in get_executables_in_path():
+        if cmd.startswith(text):
+            matches.append(cmd)
     
-    return sorted(matches)
-
-def complete(text, state):
-    """Tab completion function for readline."""
-    global last_tab_time, last_tab_text, last_tab_matches
+    matches.sort()
     
-    # Check if this is a second tab press for the same text within a short time window
-    current_time = time.time()
-    double_tab = (text == last_tab_text and 
-                   current_time - last_tab_time < 0.5 and 
-                   last_tab_matches and len(last_tab_matches) > 1)
-    
-    if state == 0:
-        # First state call: get all matches
-        matches = get_matches(text)
+    # Check if we're in multiple matches situation
+    if len(matches) > 1 and state == 0:
+        # Ring the bell for first tab with multiple matches
+        sys.stdout.write("\a")
+        sys.stdout.flush()
         
-        # Store for potential double-tab
-        last_tab_text = text
-        last_tab_time = current_time
-        last_tab_matches = matches
-        
-        if len(matches) == 1:
-            # Single match
-            completion = matches[0]
+        # Find common prefix if any
+        if matches:
+            common = matches[0]
+            for match in matches[1:]:
+                i = 0
+                while i < len(common) and i < len(match) and common[i] == match[i]:
+                    i += 1
+                common = common[:i]
             
-            # Directly manipulate the line buffer for single matches to ensure space
-            line_buffer = readline.get_line_buffer()
-            cursor_pos = readline.get_endidx()
-            
-            # Replace the text with the completed command
-            new_buffer = line_buffer[:cursor_pos - len(text)] + completion + " " + line_buffer[cursor_pos:]
-            
-            # Set the new line buffer
-            readline.insert_text('')  # Clear first
-            readline.insert_text(new_buffer[len(readline.get_line_buffer()):])
-            
-            return None  # Return None to indicate we've handled it
-        elif len(matches) > 1:
-            # Multiple matches
-            if double_tab:
-                # Second tab press: print all matches
-                print()
-                print("  ".join(matches))
-                print(f"$ {text}", end="")
-                # Return none so readline doesn't modify the line
-                return None
-            else:
-                # First tab press: ring the bell
-                sys.stdout.write("\a")
-                sys.stdout.flush()
-                # Find common prefix if any
-                if matches:
-                    common_prefix = matches[0]
-                    for match in matches[1:]:
-                        i = 0
-                        while i < len(common_prefix) and i < len(match) and common_prefix[i] == match[i]:
-                            i += 1
-                        common_prefix = common_prefix[:i]
-                    
-                    if common_prefix and len(common_prefix) > len(text):
-                        return common_prefix
-            
-            # No completion yet, but store the matches for potential double-tab
-            complete.matches = matches
-            return None
-        else:
-            # No matches
-            complete.matches = []
-            return None
+            if len(common) > len(text):
+                return common
+    
+    # For multiple tabs on multiple matches
+    if len(matches) > 1 and state == 1:  # Second tab press
+        print()  # Add a newline
+        print("  ".join(matches))  # Print all matches
+        print(f"$ {text}", end="")  # Reprint the prompt
+        return None
+    
+    # Add a space after single match
+    if state < len(matches):
+        # This is what matters most - we add the space right here
+        return matches[state] + " "
     else:
-        # Subsequent state calls after multiple matches on second tab
-        if double_tab:
-            # Already printed the list, don't complete anything
-            return None
-        
-        # Return the matches in order by state
-        try:
-            if state < len(complete.matches):
-                return complete.matches[state]
-            return None
-        except (IndexError, AttributeError):
-            return None
-
-# Initialize the attributes
-complete.matches = []
-
-def setup_custom_completer():
-    """Set up a custom readline completer function that wraps our completer
-    to ensure spaces are added correctly to tab completions."""
-    
-    old_completer = readline.get_completer()
-    
-    def custom_complete_wrapper(text, state):
-        result = old_completer(text, state)
-        if result is not None and state == 0 and len(get_matches(text)) == 1:
-            # For a single match, make sure a space is appended
-            # This may never be reached due to our direct buffer manipulation,
-            # but is here as a fallback
-            line_buffer = readline.get_line_buffer()
-            cursor_pos = readline.get_endidx()
-            if cursor_pos == len(line_buffer):  # If cursor at end
-                if not result.endswith(" "):
-                    result += " "
-        return result
-    
-    return custom_complete_wrapper
+        return None
 
 def main():
-    # Set up readline for autocomplete
-    readline.parse_and_bind("tab: complete")
-    readline.set_completer(complete)
+    try:
+        # Set up the tab completion
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer(my_completer)
+    except Exception as e:
+        print(f"Warning: Tab completion setup failed: {e}", file=sys.stderr)
     
     # REPL set up
     while True:
-        sys.stdout.write("$ ")
-        sys.stdout.flush()  # Make sure the prompt is displayed
-        
         try:
+            sys.stdout.write("$ ")
+            sys.stdout.flush()
             user_input = input()
-        except EOFError:
-            print()  # Add a newline
-            break
-        
-        # Handle empty input
-        if not user_input.strip():
-            continue
-        
-        # First split the input using shlex to handle quotes correctly
-        try:
-            parts = shlex.split(user_input)
-        except ValueError as e:
-            print(f"Syntax error: {e}")
-            continue
-        
-        if not parts:
-            continue
-        
-        # Parse for redirection
-        cmd_parts, stdout_file, stderr_file, append_stdout, append_stderr = parse_redirection(parts)
-        
-        # Make sure parent directories exist
-        if stdout_file:
-            ensure_directory_exists(stdout_file)
-        if stderr_file:
-            ensure_directory_exists(stderr_file)
-            # Always create the stderr file, even if empty
-            mode = 'a' if append_stderr else 'w'
-            open(stderr_file, mode).close()
-        
-        if not cmd_parts:
-            continue
-        
-        cmd = cmd_parts[0]
-        argv = cmd_parts[1:]
-        
-        # Modified original input without redirection for echo command
-        modified_input = user_input
-        if stdout_file or stderr_file:
-            # This is a simple way to strip the redirection part from the input
-            # It's not perfect but works for basic cases
+            
+            # Handle empty input
+            if not user_input.strip():
+                continue
+            
+            # First split the input using shlex to handle quotes correctly
+            try:
+                parts = shlex.split(user_input)
+            except ValueError as e:
+                print(f"Syntax error: {e}")
+                continue
+            
+            if not parts:
+                continue
+            
+            # Parse for redirection
+            cmd_parts, stdout_file, stderr_file, append_stdout, append_stderr = parse_redirection(parts)
+            
+            # Make sure parent directories exist
+            if stdout_file:
+                ensure_directory_exists(stdout_file)
+            if stderr_file:
+                ensure_directory_exists(stderr_file)
+                # Always create the stderr file, even if empty
+                mode = 'a' if append_stderr else 'w'
+                open(stderr_file, mode).close()
+            
+            if not cmd_parts:
+                continue
+            
+            cmd = cmd_parts[0]
+            argv = cmd_parts[1:]
+            
+            # Modified original input without redirection for echo command
             modified_input = user_input
-            for op in [" >", " 1>", " 2>", " >>", " 1>>", " 2>>"]:
-                if op in modified_input:
-                    modified_input = modified_input.split(op)[0]
-        
-        if cmd == "exit":
-            input_exit(argv)
-        elif cmd == "echo":
-            input_echo(modified_input, stdout_file, stderr_file, append_stdout, append_stderr)
-        elif cmd == "type":
-            input_type(argv, stdout_file, stderr_file, append_stdout, append_stderr)
-        elif cmd == "pwd":
-            input_pwd(stdout_file, stderr_file, append_stdout, append_stderr)
-        elif cmd == "cd":
-            input_cd(argv, stderr_file, append_stderr)
-        else:
-            if shutil.which(cmd):  # Check if the command exists in PATH
-                try:
-                    # Configure stdout and stderr redirection
-                    stdout_dest = subprocess.PIPE if stdout_file else None
-                    stderr_dest = subprocess.PIPE if stderr_file else None
-                    
-                    # Run the command with appropriate redirection
-                    process = subprocess.run(cmd_parts, stdout=stdout_dest, stderr=stderr_dest, text=True)
-                    
-                    # Handle stdout redirection
-                    if stdout_file and process.stdout is not None:
-                        mode = 'a' if append_stdout else 'w'
-                        with open(stdout_file, mode) as f:
-                            f.write(process.stdout)
-                    elif process.stdout is not None:
-                        print(process.stdout, end='')
-                    
-                    # Handle stderr redirection
-                    if stderr_file and process.stderr is not None:
-                        mode = 'a' if append_stderr else 'w'
-                        with open(stderr_file, mode) as f:
-                            f.write(process.stderr)
-                    elif process.stderr is not None:
-                        print(process.stderr, end='', file=sys.stderr)
+            if stdout_file or stderr_file:
+                # This is a simple way to strip the redirection part from the input
+                # It's not perfect but works for basic cases
+                modified_input = user_input
+                for op in [" >", " 1>", " 2>", " >>", " 1>>", " 2>>"]:
+                    if op in modified_input:
+                        modified_input = modified_input.split(op)[0]
+            
+            if cmd == "exit":
+                input_exit(argv)
+            elif cmd == "echo":
+                input_echo(modified_input, stdout_file, stderr_file, append_stdout, append_stderr)
+            elif cmd == "type":
+                input_type(argv, stdout_file, stderr_file, append_stdout, append_stderr)
+            elif cmd == "pwd":
+                input_pwd(stdout_file, stderr_file, append_stdout, append_stderr)
+            elif cmd == "cd":
+                input_cd(argv, stderr_file, append_stderr)
+            else:
+                if shutil.which(cmd):  # Check if the command exists in PATH
+                    try:
+                        # Configure stdout and stderr redirection
+                        stdout_dest = subprocess.PIPE if stdout_file else None
+                        stderr_dest = subprocess.PIPE if stderr_file else None
                         
-                except Exception as e:
-                    error_message = f"Error executing {cmd}: {e}"
+                        # Run the command with appropriate redirection
+                        process = subprocess.run(cmd_parts, stdout=stdout_dest, stderr=stderr_dest, text=True)
+                        
+                        # Handle stdout redirection
+                        if stdout_file and process.stdout is not None:
+                            mode = 'a' if append_stdout else 'w'
+                            with open(stdout_file, mode) as f:
+                                f.write(process.stdout)
+                        elif process.stdout is not None:
+                            print(process.stdout, end='')
+                        
+                        # Handle stderr redirection
+                        if stderr_file and process.stderr is not None:
+                            mode = 'a' if append_stderr else 'w'
+                            with open(stderr_file, mode) as f:
+                                f.write(process.stderr)
+                        elif process.stderr is not None:
+                            print(process.stderr, end='', file=sys.stderr)
+                            
+                    except Exception as e:
+                        error_message = f"Error executing {cmd}: {e}"
+                        if stderr_file:
+                            mode = 'a' if append_stderr else 'w'
+                            with open(stderr_file, mode) as f:
+                                f.write(error_message + "\n")
+                        else:
+                            print(error_message, file=sys.stderr)
+                else:
+                    error_message = f"{cmd}: command not found"
                     if stderr_file:
                         mode = 'a' if append_stderr else 'w'
                         with open(stderr_file, mode) as f:
                             f.write(error_message + "\n")
                     else:
                         print(error_message, file=sys.stderr)
-            else:
-                error_message = f"{cmd}: command not found"
-                if stderr_file:
-                    mode = 'a' if append_stderr else 'w'
-                    with open(stderr_file, mode) as f:
-                        f.write(error_message + "\n")
-                else:
-                    print(error_message, file=sys.stderr)
+        
+        except EOFError:
+            print()  # Add a newline
+            break
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()
