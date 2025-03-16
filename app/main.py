@@ -180,7 +180,7 @@ def complete(text, state):
     current_time = time.time()
     double_tab = (text == last_tab_text and 
                    current_time - last_tab_time < 0.5 and 
-                   last_tab_matches)
+                   last_tab_matches and len(last_tab_matches) > 1)
     
     if state == 0:
         # First state call: get all matches
@@ -220,7 +220,7 @@ def complete(text, state):
                         return common_prefix
             
             # No completion yet, but store the matches for potential double-tab
-            complete.matches = []
+            complete.matches = matches
             return None
         else:
             # No matches
@@ -238,13 +238,18 @@ def complete(text, state):
         except (IndexError, AttributeError):
             return None
 
-# Initialize the attribute
+# Initialize the attributes
 complete.matches = []
 
 def main():
     # Set up readline for autocomplete
     readline.parse_and_bind("tab: complete")
     readline.set_completer(complete)
+    
+    # Set readline's completion append character to an empty string
+    # This prevents readline from adding a space automatically
+    # We'll add spaces ourselves in the completer
+    readline.set_completion_append_character('')
     
     # REPL set up
     while True:
